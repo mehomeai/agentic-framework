@@ -1,6 +1,6 @@
 # Me product architecture
 
-Status: implemented locally. Canonical description of the home + hosted-backend + phone system as implemented in the local checkouts. Not shipped / released / deployed — all changes remain uncommitted. Supersedes all earlier hosted-relay / cloud-executor / single-user assumptions in prior personal-agent plans. Those older plans remain in-repo only as labelled superseded history; this file is authority for what was built locally.
+Status: implemented on review branch `feat/home-agent-foundation` (committed/pushed; draft PR #1 pending review/checks). No merge to protected `main`; no deployed release. Canonical description of the home + hosted-backend + phone system as implemented. Supersedes all earlier hosted-relay / cloud-executor / single-user assumptions in prior personal-agent plans. Those older plans remain in-repo only as labelled superseded history; this file is authority for what was built.
 
 Implementation source: sibling checkouts under `<me>` (`infra-server`, `agentic-framework`, `backend-server`, `phone-app`, `setup-infra`). No real GitHub CI / deploy / public tunnel / IdP / native push proof is claimed. Operator quickstart below links the per-repo guides rather than duplicating their command walls; portable paths use `<me>` and never hard-code a home absolute user path as a prerequisite.
 

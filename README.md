@@ -7,7 +7,9 @@ Learn about the vision at [Me — Your intelligence. Yours.](https://mehomeai.re
 
 ## Status
 
-Implemented locally (not shipped; all changes uncommitted). Agent runtime
+Implemented on review branch `feat/home-agent-foundation`
+(committed/pushed; draft PR #1 pending review/checks). No merge to
+protected `main`; no deployed release. Agent runtime
 (`runtime-bridge-v1` + `task-rpc-v1`): the agent loop is owned by the
 maintained LangGraph prebuilt ReAct harness pinned `langgraph==1.2.19` /
 `prebuilt==1.1.1` with persisted SqliteSaver checkpoint (`create_react_agent`
