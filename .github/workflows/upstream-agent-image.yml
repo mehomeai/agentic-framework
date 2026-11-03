@@ -108,7 +108,7 @@ jobs:
         if: always()
         run: docker stop agent-ci || true
       - name: Upload image pip freeze
-        uses: actions/upload-artifact@ea3bd823a9a36ad68fa4dba7e52daef381862ec # v6.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: image-pip-freeze
           path: /tmp/image-freeze.txt
@@ -144,7 +144,7 @@ jobs:
         env:
           ME_RUNTIME_LIVE_TESTS: ""
       - name: Upload resolved freeze
-        uses: actions/upload-artifact@ea3bd823a9a36ad68fa4dba7e52daef381862ec # v6.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ci-resolved-freeze
           path: /tmp/ci-freeze.txt
