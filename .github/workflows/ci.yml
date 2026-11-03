@@ -27,3 +27,44 @@ jobs:
         run: python3 scripts/check_repository.py
       - name: Check whitespace
         run: git show --format= --check HEAD
+
+  # Offline fixture suite only. No live keys, no model endpoints, no Docker
+  # pulls, no browser downloads: test_live_optin.py is never invoked here
+  # (it skips by default) and the tests fail closed on absent backends.
+  pin-coherence:
+    name: Browser image and SDK pin coherence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify Playwright image tag matches pinned SDK
+        # Official image mcr.microsoft.com/playwright/python:vX.Y.Z-noble must
+        # track the pinned SDK (pyproject browser extra + Dockerfile pip pin).
+        # Fails closed on drift; no installs, no pulls, no permissive stubs.
+        run: |
+          test "$(grep -oE 'playwright==[0-9.]+' pyproject.toml | head -n 1)" = "playwright==1.64.1"
+          grep -q 'FROM mcr.microsoft.com/playwright/python:v1.64.1-noble' docker/browser/Dockerfile
+          grep -q '"playwright==1.64.1"' docker/browser/Dockerfile
+
+  fixture-tests:
+    name: Fixture runtime tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create virtual environment
+        run: python3 -m venv .venv
+      - name: Install exact pinned requirements
+        run: .venv/bin/pip install -r requirements.txt
+      - name: Install runtime package (editable, no deps)
+        run: .venv/bin/pip install --no-deps -e .
+      - name: Run offline fixture + mocked transport/sandbox tests
+        run: .venv/bin/python -m pytest tests --ignore=tests/test_live_optin.py -v
+        env:
+          ME_RUNTIME_LIVE_TESTS: ""

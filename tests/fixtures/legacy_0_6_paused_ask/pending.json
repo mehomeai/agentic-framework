@@ -1,0 +1,16 @@
+{
+  "request": "WRITE_THEN_ASK: what is the deadline?",
+  "run_id": "run_legacy_1",
+  "user_id": "alice",
+  "conversation_id": "conv_a",
+  "workspace": "/tmp/me-legacy-capture/task1",
+  "budgets": {
+    "max_steps": 8,
+    "max_wall_seconds": 60,
+    "max_tool_calls": 20
+  },
+  "wall_start": 1793707424.809716,
+  "kind": "waiting_input",
+  "id": "q1",
+  "prompt": "what is the deadline?"
+}

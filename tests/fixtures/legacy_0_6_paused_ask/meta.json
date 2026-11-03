@@ -1,0 +1,1 @@
+{"captured_langgraph": "0.6.11", "captured_prebuilt": "0.6.5", "captured_sdk": "0.2.15", "request": "WRITE_THEN_ASK: what is the deadline?", "note": "Synthetic legacy 0.6 paused ASK with prior files_write effect (output/legacy_effect.md). Pending workspace path is templated on copy; active_wall_seconds absent by design to exercise one-time migration."}
