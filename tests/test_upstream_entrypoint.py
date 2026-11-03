@@ -482,23 +482,89 @@ async def test_same_thread_resumes_across_runs(upstream_app, monkeypatch):
         fake.stop()
 
 
+@pytest.mark.asyncio
+async def test_ollama_route_boots_real_model_path_end_to_end(
+        upstream_app, monkeypatch):
+    """Production Ollama-env regression: ONLY `ollama_route()` output plus
+    the required server/tool tokens, every personal key/store removed.
+    The REAL native `main._model()` (init_chat_model with the dummy key)
+    must construct and the full AG-UI run must complete through the
+    loopback model and the enforcing callback — no invented verifier
+    credentials, no ambient auth."""
+    from me_runtime.agent_service import config_check, ollama_route
+    main = upstream_app
+    fake = FakeOpenAI(["computer_navigate"], "ollama local result 7",
+                      callback_token="callback-token")
+    base = fake.start()
+    try:
+        for name in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY",
+                     "GOOGLE_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY",
+                     "CLAUDE_CODE_OAUTH_TOKEN", "CHATGPT_AUTH_FILE",
+                     "OPENAI_BASE_URL", "BOT_PROVIDER", "BOT_MODEL",
+                     "ME_OLLAMA_URL", "ME_OLLAMA_MODEL"):
+            monkeypatch.delenv(name, raising=False)
+        route = ollama_route(base, "llama3.1")
+        assert route["OPENAI_API_KEY"] == "ollama"  # dummy, not a credential
+        for k, v in route.items():
+            monkeypatch.setenv(k, v)
+        monkeypatch.setenv("MANAGED_AGENT_TOKEN", "entrypoint-token")
+        monkeypatch.setenv("AGENT_TOOL_TOKEN", "callback-token")
+        monkeypatch.setenv("OPENBOT_TOOL_URL", base + "/api/agent-tools/call")
+        cfg = config_check()
+        assert cfg["ok"], cfg["problems"]
+        body = _agui_body(["computer_navigate"], ["computer_navigate"],
+                          "run-assertion-ollama")
+        async with _client(main.app) as client:
+            resp = await client.post(
+                "/", json=body,
+                headers={"x-openbot-agent-token": "entrypoint-token"})
+        assert resp.status_code == 200
+        events = [json.loads(line[6:]) for line in resp.text.splitlines()
+                  if line.startswith("data: ")]
+        assert events[0]["type"] == "RUN_STARTED"
+        assert events[-1]["type"] == "RUN_FINISHED"
+        assert not [e for e in events if e["type"] == "RUN_ERROR"], events
+        assert len(fake.callbacks) == 1
+        assert fake.refusals == []
+        assert fake.callbacks[0]["body"]["run"] == "run-assertion-ollama"
+        tool_turns = [b for b in fake.model_bodies
+                      if b.get("messages", [{}])[-1].get("role") == "tool"]
+        assert tool_turns
+        # The dummy key traveled to the model endpoint only as the SDK's
+        # bearer, never as run content.
+        assert "run-assertion-ollama" not in json.dumps(fake.model_bodies)
+    finally:
+        fake.stop()
+
+
 def test_ollama_compatible_route_config(monkeypatch):
-    """Local-first Ollama via OpenAI-compatible base URL (verified, no net)."""
+    """Local-first Ollama via OpenAI-compatible base URL (verified, no net).
+
+    The generated route carries the documented non-secret dummy
+    OPENAI_API_KEY=ollama: the real SDK refuses keyless construction.
+    """
     from me_runtime.agent_service import (config_check, ollama_route,
                                           verify_ollama_model_object)
+    for name in ("OPENAI_API_KEY",):
+        monkeypatch.delenv(name, raising=False)
     env = {"MANAGED_AGENT_TOKEN": "t", "AGENT_TOOL_TOKEN": "t",
            **ollama_route("http://127.0.0.1:11434", "llama3.1")}
     assert env == {"MANAGED_AGENT_TOKEN": "t", "AGENT_TOOL_TOKEN": "t",
                    "BOT_PROVIDER": "openai",
                    "OPENAI_BASE_URL": "http://127.0.0.1:11434/v1",
+                   "OPENAI_API_KEY": "ollama",
                    "BOT_MODEL": "llama3.1"}
-    cfg = config_check({**env, "OPENAI_API_KEY": "ollama"})
+    cfg = config_check(env)
     assert cfg["ok"], cfg["problems"]
     assert cfg["provider"] == "openai"
     proof = verify_ollama_model_object(env)
     assert proof["ok"], proof
     assert proof["model_class"] == "ChatOpenAI"
     assert proof["base_url"].startswith("http://127.0.0.1:11434/v1")
+    # A base URL alone (no key) is NOT bootable: the SDK raises.
+    keyless = {k: v for k, v in env.items() if k != "OPENAI_API_KEY"}
+    assert not config_check(keyless)["ok"]
+    assert not verify_ollama_model_object(keyless)["ok"]
     # BOT_PROVIDER=ollama is NOT a supported config (no pretend support).
     bad = config_check({"MANAGED_AGENT_TOKEN": "t", "AGENT_TOOL_TOKEN": "t",
                         "BOT_PROVIDER": "ollama", "OPENAI_API_KEY": "x"})

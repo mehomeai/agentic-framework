@@ -57,8 +57,12 @@ audit: `results/runtime-contract.json` + candidates tree (2026-11-03).
   `readiness_check(env)` (config + live-gated loopback probe,
   Intelligence delegated); `ollama_route(..., in_container)` +
   `verify_ollama_model_object()` (local Ollama via OpenAI-compatible
-  base URL; image runs use a container-reachable endpoint, never
-  host loopback by accident; `BOT_PROVIDER=ollama` rejected).
+  base URL + REQUIRED dummy `OPENAI_API_KEY=ollama` — the real SDK
+  refuses keyless construction even with a base URL; verifier never
+  invents credentials; URL alone is not bootable. Image runs use a
+  container-reachable endpoint, never host loopback by accident;
+  `BOT_PROVIDER=ollama` rejected). Exact namespace in
+  `results/runtime-local-model-contract.json`.
 - `scripts/stage_agent_image_context.py <dest>`: stdlib-only stager;
   refuses symlink destinations and foreign nonempty dirs, safe owned
   re-run, no destructive cleanup; prints manifest + `docker build`/`run`.

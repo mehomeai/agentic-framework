@@ -334,6 +334,16 @@ def ollama_route(ollama_base: str | None = None,
     explicit `ollama_base`) for image runs: loopback defaults are
     rewritten to `http://host.docker.internal:11434` (Docker Desktop;
     Linux uses the host gateway / `--add-host` mapping, set explicitly).
+    A host-127 URL is NEVER container-reachable; do not test a host
+    URL as container reachability.
+
+    The dummy `OPENAI_API_KEY="ollama"` is REQUIRED, not optional: the
+    actual SDK (`init_chat_model`, exactly as native `main._model()`
+    calls it) raises `OpenAIError: Missing credentials` with no key,
+    even against an Ollama base URL (proven, not assumed). `"ollama"`
+    is a documented non-secret placeholder, never a real credential;
+    an explicitly-set operator key is kept as-is. C installers use the
+    same literal constant.
     """
     base = (ollama_base or os.environ.get("ME_OLLAMA_URL")
             or "http://127.0.0.1:11434").rstrip("/")
@@ -341,6 +351,7 @@ def ollama_route(ollama_base: str | None = None,
         base = "http://host.docker.internal:11434"
     return {"BOT_PROVIDER": "openai",
             "OPENAI_BASE_URL": base + "/v1",
+            "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY") or "ollama",
             "BOT_MODEL": model or os.environ.get("ME_OLLAMA_MODEL")
             or "llama3.1"}
 
@@ -350,7 +361,10 @@ def verify_ollama_model_object(env: dict) -> dict:
 
     Calls the vendored `main._model()` semantics via langchain's
     `init_chat_model` exactly as upstream does (provider=openai +
-    OPENAI_BASE_URL). Construction is lazy (no network, no spend).
+    OPENAI_BASE_URL + OPENAI_API_KEY). Construction is lazy (no network,
+    no spend). Uses ONLY the passed env: never invents a credential the
+    production mapping does not contain (a missing key fails here exactly
+    as the native container would fail at boot).
     Returns {ok, model_class, base_url} or {ok False, error}.
     """
     saved = {k: os.environ.get(k) for k in
@@ -360,7 +374,10 @@ def verify_ollama_model_object(env: dict) -> dict:
         os.environ.pop("CHATGPT_AUTH_FILE", None)
         for k, v in env.items():
             os.environ[k] = v
-        os.environ.setdefault("OPENAI_API_KEY", "config-check-only")
+        for k in ("BOT_PROVIDER", "BOT_MODEL", "OPENAI_BASE_URL",
+                  "OPENAI_API_KEY"):
+            if k not in env:
+                os.environ.pop(k, None)
         from langchain.chat_models import init_chat_model
         settings = resolve_bot_settings(env)
         if not settings.get("supported"):
@@ -422,12 +439,15 @@ def config_check(env: dict | None = None) -> dict:
         problems.append(resolved.get("reason", "unsupported provider"))
     else:
         key_var = resolved.get("key_variable", "")
-        base_var = resolved.get("base_url_variable", "")
-        # Key may be omitted only when a compatible base URL is explicitly
-        # set (local Ollama / gateway). Otherwise the provider key is required.
-        if not (src.get(key_var) or "").strip() and not (
-                src.get(base_var) or "").strip():
-            problems.append(f"{key_var} is not set and no {base_var} override")
+        # The provider key is ALWAYS required: the actual model SDK raises
+        # `Missing credentials` with no key even when a compatible base
+        # URL override is set (proven against init_chat_model). A base URL
+        # alone never counts as bootable. The local Ollama route carries
+        # the documented non-secret dummy OPENAI_API_KEY=ollama.
+        if not (src.get(key_var) or "").strip():
+            problems.append(
+                f"{key_var} is not set (required: the model SDK refuses "
+                "keyless construction even with a base-URL override)")
     return {"ok": not problems, "provider": resolved.get("provider"),
             "model": resolved.get("model"),
             "supported": resolved.get("supported", False),
