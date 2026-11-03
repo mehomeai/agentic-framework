@@ -60,9 +60,12 @@ uvicorn[standard]
 httpx>=0.28,<1
 """
 
-# Resolved pins verified installed in this repo's venv on 2026-11-03.
+# Resolved pins: framework rows verified installed in this repo's venv;
+# image-only rows (uvicorn, python-multipart, langchain-google-genai)
+# and provider SDK rows (anthropic, openai) are the CI-verified resolves
+# from Linux run 41731651037 (image + provider freezes), not invented.
 # Written into the build context as constraints-me.txt so image builds
-# resolve the same framework versions the protocol tests ran against.
+# resolve the same versions the protocol tests ran against.
 # Every row here MUST be installed by the image requirements closure;
 # Linux CI asserts each one from `pip freeze` in the built image.
 RESOLVED_PINS = (
@@ -76,6 +79,11 @@ RESOLVED_PINS = (
     "langchain-core==1.7.4",
     "langchain-openai==1.7.3",
     "langchain-anthropic==1.7.9",
+    "langchain-google-genai==4.4.2",
+    "anthropic==2.4.0",
+    "openai==3.42.1",
+    "uvicorn==0.54.0",
+    "python-multipart==0.0.33",
     "fastapi==0.162.0",
     "starlette==1.10.0",
     "httpx==0.28.1",

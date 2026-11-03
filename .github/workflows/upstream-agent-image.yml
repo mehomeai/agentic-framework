@@ -128,12 +128,16 @@ jobs:
           python-version: "3.12"
       - name: Create virtual environment
         run: python3 -m venv .venv
-      - name: Install pinned requirements plus image-only google provider
-        # google-genai resolves here (not anchored in-repo: this job proves
-        # the current resolve works and records it in the freeze artifact).
+      - name: Install pinned requirements plus CI-verified google provider
+        # Same native constraints the image consumes (single source:
+        # agent_service.RESOLVED_PINS), so this environment matches the
+        # image reproducibly instead of floating on pip's latest resolve.
+        # google-genai==4.4.2 is the CI-verified resolve recorded in the
+        # provider freeze artifact.
         run: |
           .venv/bin/pip install -r requirements.txt
-          .venv/bin/pip install langchain-google-genai
+          PYTHONPATH=src python3 -c "from me_runtime.agent_service import RESOLVED_PINS; print('\n'.join(RESOLVED_PINS))" > /tmp/constraints-me.txt
+          .venv/bin/pip install -c /tmp/constraints-me.txt "langchain-google-genai==4.4.2"
           .venv/bin/pip freeze > /tmp/ci-freeze.txt
       - name: Install runtime package (editable, no deps)
         run: .venv/bin/pip install --no-deps -e .

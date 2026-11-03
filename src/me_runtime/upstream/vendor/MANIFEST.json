@@ -55,7 +55,7 @@
   "generated": {
     "requirements_txt_sha256": "b00c4978e2e6fdadc0b16f6b10e91d6b5bd47b0dd871741eeb01c055b52dbad4",
     "requirements_note": "verbatim upstream agent-langgraph-agui/requirements.txt @ pin",
-    "constraints_txt_sha256": "07a4acfa663b6e5aacfc1f5d7b32c59dd30eea081e9385d3e8b21910a8ce5932",
-    "constraints_note": "RESOLVED_PINS joined with newlines + trailing newline; every row is installed by the image requirements closure (Linux CI asserts each from image pip freeze). Dev-only langgraph-checkpoint-sqlite stays in requirements.txt only, never in constraints. Image-only trio (uvicorn, python-multipart, langchain-google-genai) resolves at build and is captured by Linux CI pip freeze"
+    "constraints_txt_sha256": "21ca6593b996a94d94edaba6964d4ce2b5b296b2165b00c37ec9736f560749dc",
+    "constraints_note": "RESOLVED_PINS joined with newlines + trailing newline; every row is installed by the image requirements closure (Linux CI asserts each from image pip freeze). Image-only pins (uvicorn 0.54.0, python-multipart 0.0.33, langchain-google-genai 4.4.2) and provider SDKs (anthropic 2.4.0, openai 3.42.1) are CI-verified resolves from run 41731651037, not invented. Dev-only langgraph-checkpoint-sqlite stays in requirements.txt only."
   }
 }

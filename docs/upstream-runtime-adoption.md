@@ -65,7 +65,13 @@ audit: `results/runtime-contract.json` + candidates tree (2026-11-03).
 - Linux acceptance: `.github/workflows/upstream-agent-image.yml`
   builds the image, probes `/health` + 401 middleware in the REAL
   container, asserts `pip freeze` honours every constrained row, and
-  runs the full suite incl. google + docker cases.
+  runs the full suite incl. google + docker cases. CI run
+  [41731651037](https://github.com/mehomeai/agentic-framework/actions/runs/41731651037)
+  green: image freeze langchain-core 1.7.4 / google-genai 4.4.2 /
+  uvicorn 0.54.0 / multipart 0.0.33 / anthropic 2.4.0, provider freeze
+  same core+google+anthropic with openai 3.42.1 — all now locked in
+  `constraints-me.txt` (image had floated openai 3.44.0, now pinned
+  3.42.1; next image CI revalidates health at that pin).
 - Full wire details: `results/runtime-wire-contract.json`.
 
 ## 3. Proven by tests (no live spend, no Docker, no keys)
