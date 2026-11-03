@@ -1,0 +1,150 @@
+name: Upstream agent image
+
+# Linux-only acceptance for the pinned agent-langgraph-agui packaging:
+# reproducible build, entrypoint + token middleware in the REAL image,
+# installed versions honouring constraints-me.txt, and the provider
+# boundaries (google + docker) that are honestly gated on dev Macs.
+# No live model spend, no license, no Intelligence: all fixtures loopback.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/me_runtime/agent_service.py"
+      - "src/me_runtime/upstream/vendor/**"
+      - "tests/test_upstream_*.py"
+      - "tests/test_agent_packaging.py"
+      - "scripts/stage_agent_image_context.py"
+      - "requirements.txt"
+      - ".github/workflows/upstream-agent-image.yml"
+  pull_request:
+    paths:
+      - "src/me_runtime/agent_service.py"
+      - "src/me_runtime/upstream/vendor/**"
+      - "tests/test_upstream_*.py"
+      - "tests/test_agent_packaging.py"
+      - "scripts/stage_agent_image_context.py"
+      - "requirements.txt"
+      - ".github/workflows/upstream-agent-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-probe:
+    name: Build image, probe entrypoint, check lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Stage reproducible build context
+        run: |
+          python3 scripts/stage_agent_image_context.py /tmp/agent-ctx
+          test -f /tmp/agent-ctx/.me-owned-stage
+          grep -q "COPY constraints-me.txt" /tmp/agent-ctx/Dockerfile
+          grep -q "pip install --no-cache-dir -r requirements.txt -c constraints-me.txt" /tmp/agent-ctx/Dockerfile
+      - name: Build image
+        run: |
+          docker build -t openbot-agent-langgraph-agui:ci /tmp/agent-ctx
+          docker images --digests openbot-agent-langgraph-agui:ci
+      - name: Health contract in the real image
+        run: |
+          docker run -d --rm --name agent-ci -p 127.0.0.1:4206:4206 \
+            -e MANAGED_AGENT_TOKEN=ci-server-token \
+            -e AGENT_TOOL_TOKEN=ci-callback-token \
+            -e BOT_PROVIDER=openai -e BOT_MODEL=ci-proof \
+            -e OPENAI_API_KEY=synthetic \
+            openbot-agent-langgraph-agui:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4206/health; then break; fi
+            sleep 2
+          done
+          # Semantic check: Starlette renders compact JSON without spaces,
+          # so compare the parsed object, not the whitespace.
+          curl -fsS http://127.0.0.1:4206/health | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); \
+             assert d == {'ok': True, 'harness': 'langgraph'}, d; \
+             assert isinstance(d['ok'], bool) and isinstance(d['harness'], str)"
+      - name: Token middleware in the real image
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:4206/ -H 'Content-Type: application/json' -d '{}')" = "401"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:4206/ -H 'Content-Type: application/json' -H 'x-openbot-agent-token: wrong' -d '{}')" = "401"
+      - name: Constraints honoured by the image install
+        run: |
+          docker exec agent-ci pip freeze > /tmp/image-freeze.txt
+          python3 - <<'EOF'
+          import re, sys
+          freeze = open('/tmp/image-freeze.txt').read()
+          have = {}
+          for line in freeze.splitlines():
+              m = re.match(r'([A-Za-z0-9_.-]+)==([^\s;]+)', line)
+              if m:
+                  have[m.group(1).lower().replace('-', '_')] = m.group(2)
+          bad = []
+          for row in open('/tmp/agent-ctx/constraints-me.txt'):
+              row = row.strip()
+              if not row:
+                  continue
+              name, _, want = row.partition('==')
+              got = have.get(name.lower().replace('-', '_'))
+              if got != want:
+                  bad.append(f'{row}: image has {got}')
+          if bad:
+              print('CONSTRAINT DRIFT:\n' + '\n'.join(bad))
+              sys.exit(1)
+          for trio in ('uvicorn', 'python_multipart', 'langchain_google_genai'):
+              assert trio in have, f'image-only dep missing: {trio}'
+          print('constraints hold; trio:', {t: have[t] for t in ('uvicorn', 'python_multipart', 'langchain_google_genai')})
+          EOF
+      - name: Stop container
+        if: always()
+        run: docker stop agent-ci || true
+      - name: Upload image pip freeze
+        uses: actions/upload-artifact@ea3bd823a9a36ad68fa4dba7e52daef381862ec # v6.0.0
+        with:
+          name: image-pip-freeze
+          path: /tmp/image-freeze.txt
+
+  provider-boundaries:
+    name: Full upstream suite incl. google + docker cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pinned Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Create virtual environment
+        run: python3 -m venv .venv
+      - name: Install pinned requirements plus image-only google provider
+        # google-genai resolves here (not anchored in-repo: this job proves
+        # the current resolve works and records it in the freeze artifact).
+        run: |
+          .venv/bin/pip install -r requirements.txt
+          .venv/bin/pip install langchain-google-genai
+          .venv/bin/pip freeze > /tmp/ci-freeze.txt
+      - name: Install runtime package (editable, no deps)
+        run: .venv/bin/pip install --no-deps -e .
+      - name: Packaging + entrypoint + full upstream vendored suite
+        # docker is present on the runner, google-genai installed: no gates,
+        # the conditional deselect in test_upstream_suite runs everything.
+        run: .venv/bin/python -m pytest tests/test_agent_packaging.py tests/test_upstream_entrypoint.py tests/test_upstream_suite.py tests/test_upstream_agui.py -v
+        env:
+          ME_RUNTIME_LIVE_TESTS: ""
+      - name: Upload resolved freeze
+        uses: actions/upload-artifact@ea3bd823a9a36ad68fa4dba7e52daef381862ec # v6.0.0
+        with:
+          name: ci-resolved-freeze
+          path: /tmp/ci-freeze.txt

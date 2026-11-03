@@ -1,8 +1,14 @@
 aiosqlite==0.22.1
+annotated-doc==0.0.5
 anthropic==2.4.0
+ag-ui-a2ui-toolkit==0.0.6
+ag-ui-langgraph==0.0.45
+ag-ui-protocol==1.0.0
+fastapi==0.162.0
 httpx2==2.16.0
 httpx==0.28.1
 jiter==0.18.0
+langchain==1.4.8
 langchain-anthropic==1.7.9
 langchain-core==1.7.4
 langchain-ollama==1.1.0
@@ -17,3 +23,5 @@ ollama==0.6.3
 openai==3.42.1
 pillow==13.0.0
 pytest==9.2.0
+pytest-asyncio==1.4.1.post1
+starlette==1.10.0

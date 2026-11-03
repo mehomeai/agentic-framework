@@ -1,0 +1,61 @@
+{
+  "repo": "CopilotKit/OpenBot",
+  "pin": "6bfee780c8e8d05141375ea55ebde33eefb3dbc0",
+  "files": {
+    "main.py": {
+      "sha256": "56e3203d58af6ba9a09b1ceac5f5ef1987f3863f95c8aa7283d37cb45e98b99c",
+      "bytes": 10042,
+      "upstream": "agent-langgraph-agui/src/main.py"
+    },
+    "tool_runtime.py": {
+      "sha256": "64b6eec85cd760bc343d94990db58229d0829ad81d8297a0f77b73234e99cb69",
+      "bytes": 8476,
+      "upstream": "agent-langgraph-agui/src/tool_runtime.py"
+    },
+    "parallel_tools.py": {
+      "sha256": "2b12eef76945800599ff1a6bf40dbdd18940ec70905e0b4a051dd40fd676914c",
+      "bytes": 8021,
+      "upstream": "agent-langgraph-agui/src/parallel_tools.py"
+    },
+    "chatgpt_store.py": {
+      "sha256": "8a696a4471d60661d22152eecf35f123f7a45cd276fff1f5d169c92d3f56624a",
+      "bytes": 1496,
+      "upstream": "agent-langgraph-agui/src/chatgpt_store.py"
+    },
+    "model_providers.py": {
+      "sha256": "ae500f6c2866d7fcb282fb9e8186e20c82b12138d34efd4f77952d23d3ab4420",
+      "bytes": 8248,
+      "upstream": "shared/model_providers.py"
+    },
+    "model-providers.json": {
+      "sha256": "1f41a21836e195931d84b2e827a1d607fa11195b9594f5fc7c9fc45676abed8d",
+      "bytes": 2205,
+      "upstream": "shared/model-providers.json"
+    },
+    "LICENSE.openbot": {
+      "sha256": "6d35a6bb107ae508da34636387f6208e75a6938e797bc0d5bfa9489d2ca95bad",
+      "bytes": 1067,
+      "upstream": "LICENSE",
+      "spdx": "MIT",
+      "note": "tracked in repo; provenance record, not shipped into the image"
+    }
+  },
+  "dockerfile": {
+    "base_sha256": "7ca6a2caf1be65d7959b7161f20b05777460637204603fba5a2cf364f404534d",
+    "base_note": "verbatim upstream agent-langgraph-agui/Dockerfile @ pin (CMD already all-string exec form)",
+    "patched_sha256": "c8aa8f047daa193810d3c5ec5d533bd91cd70092bb9d9ba51d484e460202c0fd",
+    "patches": [
+      {
+        "id": "BUILD-001",
+        "scope": "build-only; upstream graph, imports, entrypoint, CMD unchanged",
+        "change": "COPY constraints-me.txt into the image and `pip install --no-cache-dir -r requirements.txt -c constraints-me.txt` so the resolved lock is actually consumed instead of floating"
+      }
+    ]
+  },
+  "generated": {
+    "requirements_txt_sha256": "b00c4978e2e6fdadc0b16f6b10e91d6b5bd47b0dd871741eeb01c055b52dbad4",
+    "requirements_note": "verbatim upstream agent-langgraph-agui/requirements.txt @ pin",
+    "constraints_txt_sha256": "07a4acfa663b6e5aacfc1f5d7b32c59dd30eea081e9385d3e8b21910a8ce5932",
+    "constraints_note": "RESOLVED_PINS joined with newlines + trailing newline; every row is installed by the image requirements closure (Linux CI asserts each from image pip freeze). Dev-only langgraph-checkpoint-sqlite stays in requirements.txt only, never in constraints. Image-only trio (uvicorn, python-multipart, langchain-google-genai) resolves at build and is captured by Linux CI pip freeze"
+  }
+}
