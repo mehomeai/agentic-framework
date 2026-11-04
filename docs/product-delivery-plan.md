@@ -1,6 +1,6 @@
 # Me whole-product delivery plan
 
-Status: implemented on review branch `feat/home-agent-foundation` 2026-11-03 (committed/pushed; draft PR #1 pending review/checks). No merge to protected `main`; no deployed release. Cross-repository record of what was implemented — not shipped / released / deployed. Product boundaries are in [product architecture](product-architecture.md); test evidence + manual gates are in `backend-server/docs/final-validation.md`. Earlier milestone drafts below are retained only as clearly archived history — the status table in §0 is authority, not the old milestone prose.
+Status: implemented on `main` (foundation PR #1; upstream agent infrastructure PR #2, merged 2026-11-03). No deployed release. Cross-repository record of what was implemented — not shipped / released / deployed. Product boundaries are in [product architecture](product-architecture.md); test evidence + manual gates are in `backend-server/docs/final-validation.md`. Earlier milestone drafts below are retained only as clearly archived history — the status table in §0 is authority, not the old milestone prose.
 
 ## 0. Implemented status (authority; supersedes §§M0–M8 prose where they conflict)
 
@@ -53,4 +53,4 @@ System cases verified per `final-validation.md`: two users × multiple chats, du
 
 1. Finish the per-repo suites from `final-validation.md` §2 on the release checkout (exact counts come from `source-release-ready.json`; do not invent pre-context counts).
 2. Complete the manual gates: real IdP, named-tunnel + DNS + `cloudflared`, Docker images + local Ollama, native Expo APNs push proof, hardware profile — implementation, not stubs; each explicitly parked until the operator provisions it.
-3. Review the coordinated draft PRs and merge after required checks; no deploy claim until the acceptance workflow (shell inputs via ENV, validated 40-hex refs, no source interpolation) actually executes, and current remote PR check status is not verified — see draft PR #1 checks.
+3. No deploy claim until the acceptance workflow (shell inputs via ENV, validated 40-hex refs, no source interpolation) actually executes against the merged `main`.
